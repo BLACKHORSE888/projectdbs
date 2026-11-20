@@ -1,0 +1,324 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Keep in sync with VITE_ADMIN_EMAILS in .env / Vercel environment variables.
+    function isAdmin() {
+      return isVerified()
+        && request.auth.token.email != null
+        && request.auth.token.email in [
+          'krshshakti@gmail.com',
+          'founder@milletly.in',
+          'admin@gmail.com'
+        ];
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'photoURL', 'role', 'createdAt'])
+        && data.keys().hasOnly([
+          'name', 'email', 'photoURL', 'role', 'phone', 'address', 'city', 'pincode', 'createdAt'
+        ])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 150
+        && data.photoURL is string && data.photoURL.size() <= 500
+        && data.role in ['customer', 'admin']
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 15))
+        && (!('address' in data) || (data.address is string && data.address.size() <= 300))
+        && (!('city' in data) || (data.city is string && data.city.size() <= 80))
+        && (!('pincode' in data) || (data.pincode is string && data.pincode.size() <= 10))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidCart(data) {
+      return data.keys().hasAll(['items', 'updatedAt'])
+        && data.keys().hasOnly(['items', 'updatedAt'])
+        && data.items is list
+        && data.items.size() <= 30
+        && (data.items.size() == 0 || data.items[0] is map)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+          'name', 'description', 'flavour', 'milletType',
+          'price', 'trialPrice', 'weightGrams', 'trialWeightGrams',
+          'images', 'ingredients', 'nutrition', 'stock', 'featured', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'name', 'slug', 'description', 'flavour', 'milletType',
+          'price', 'trialPrice', 'weightGrams', 'trialWeightGrams',
+          'images', 'ingredients', 'nutrition', 'stock', 'featured', 'createdAt'
+        ])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && (!('slug' in data) || (data.slug is string && data.slug.size() <= 120))
+        && data.description is string && data.description.size() >= 5 && data.description.size() <= 1500
+        && data.flavour is string && data.flavour.size() >= 2 && data.flavour.size() <= 60
+        && data.milletType is string && data.milletType.size() >= 2 && data.milletType.size() <= 60
+        && data.price is number && data.price > 0 && data.price <= 10000
+        && data.trialPrice is number && data.trialPrice > 0 && data.trialPrice <= 5000
+        && data.weightGrams is number && data.weightGrams > 0 && data.weightGrams <= 5000
+        && data.trialWeightGrams is number && data.trialWeightGrams > 0 && data.trialWeightGrams <= 1000
+        && data.images is list && data.images.size() >= 1 && data.images.size() <= 6 && data.images[0] is string
+        && data.ingredients is list && data.ingredients.size() >= 1 && data.ingredients.size() <= 20 && data.ingredients[0] is string
+        && data.nutrition is map
+        && data.stock is number && data.stock >= 0 && data.stock <= 100000
+        && data.featured is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+          'userId', 'userEmail', 'items', 'subtotal', 'shippingFee', 'total',
+          'address', 'phone', 'paymentMethod', 'paymentStatus', 'status', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'userEmail', 'items', 'subtotal', 'shippingFee', 'total',
+          'address', 'phone', 'paymentMethod', 'paymentStatus', 'status', 'createdAt'
+        ])
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128
+        && data.userEmail is string && data.userEmail.size() <= 150
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 30 && data.items[0] is map
+        && data.subtotal is number && data.subtotal > 0 && data.subtotal <= 500000
+        && data.shippingFee is number && data.shippingFee >= 0 && data.shippingFee <= 5000
+        && data.total is number && data.total > 0 && data.total <= 505000
+        && data.address is map
+        && data.address.keys().hasAll(['name', 'phone', 'addressLine', 'city', 'pincode'])
+        && data.address.name is string && data.address.name.size() >= 1 && data.address.name.size() <= 100
+        && data.address.phone is string && data.address.phone.size() >= 10 && data.address.phone.size() <= 15
+        && data.address.addressLine is string && data.address.addressLine.size() >= 3 && data.address.addressLine.size() <= 300
+        && data.address.city is string && data.address.city.size() >= 2 && data.address.city.size() <= 80
+        && data.address.pincode is string && data.address.pincode.size() >= 6 && data.address.pincode.size() <= 10
+        && data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 15
+        && data.paymentMethod in ['COD_UPI_CONFIRM', 'RAZORPAY']
+        && data.paymentStatus in ['pending', 'paid']
+        && data.status in ['Placed', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidTrialRequest(data) {
+      return data.keys().hasAll([
+          'userId', 'name', 'email', 'phone', 'city', 'address', 'pincode',
+          'preferredFlavour', 'currentSnackHabit', 'feedbackConsent', 'status', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'name', 'email', 'phone', 'city', 'address', 'pincode',
+          'preferredFlavour', 'currentSnackHabit', 'tasteFeedback', 'feedbackConsent', 'status', 'createdAt'
+        ])
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 150
+        && data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 15
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 80
+        && data.address is string && data.address.size() >= 5 && data.address.size() <= 300
+        && data.pincode is string && data.pincode.size() >= 6 && data.pincode.size() <= 10
+        && data.preferredFlavour is string && data.preferredFlavour.size() >= 2 && data.preferredFlavour.size() <= 80
+        && data.currentSnackHabit is string && data.currentSnackHabit.size() >= 2 && data.currentSnackHabit.size() <= 200
+        && (!('tasteFeedback' in data) || (data.tasteFeedback is string && data.tasteFeedback.size() <= 600))
+        && data.feedbackConsent is bool
+        && data.status in ['Pending', 'Approved', 'Dispatched', 'Completed']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSurvey(data) {
+      return data.keys().hasAll([
+          'userId', 'userEmail', 'userName', 'currentSnackingHabits', 'monthlySpend',
+          'preferredFlavours', 'willingnessToPay', 'tasteRating', 'wouldBuyAgain', 'comments', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'userEmail', 'userName', 'currentSnackingHabits', 'monthlySpend',
+          'preferredFlavours', 'willingnessToPay', 'tasteRating', 'wouldBuyAgain', 'comments', 'createdAt'
+        ])
+        && data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128
+        && data.userEmail is string && data.userEmail.size() <= 150
+        && data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100
+        && data.currentSnackingHabits is string && data.currentSnackingHabits.size() >= 2 && data.currentSnackingHabits.size() <= 120
+        && data.monthlySpend is string && data.monthlySpend.size() >= 2 && data.monthlySpend.size() <= 60
+        && data.preferredFlavours is list && data.preferredFlavours.size() <= 10
+        && (data.preferredFlavours.size() == 0 || data.preferredFlavours[0] is string)
+        && data.willingnessToPay in [200, 250, 300]
+        && data.tasteRating is number && data.tasteRating >= 1 && data.tasteRating <= 5
+        && data.wouldBuyAgain in ['Yes', 'Maybe', 'No']
+        && data.comments is string && data.comments.size() <= 1000
+        && data.createdAt is timestamp;
+    }
+
+    function isValidContactMessage(data) {
+      return data.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt'])
+        && data.keys().hasOnly(['name', 'email', 'subject', 'message', 'createdAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 150
+        && data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 150
+        && data.message is string && data.message.size() >= 5 && data.message.size() <= 2000
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSubscriber(data) {
+      return data.keys().hasAll(['contact', 'channel', 'createdAt'])
+        && data.keys().hasOnly(['contact', 'channel', 'createdAt'])
+        && data.contact is string && data.contact.size() >= 4 && data.contact.size() <= 150
+        && data.channel in ['email', 'whatsapp']
+        && data.createdAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // Users: strict PII isolation, role lock
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isVerified()
+        && isValidUser(incoming())
+        && incoming().role == 'customer'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(userId)
+        && isValidUser(incoming())
+        && (
+          (isOwner(userId)
+            && isVerified()
+            && incoming().role == existing().role
+            && incoming().email == existing().email
+            && incoming().createdAt == existing().createdAt
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'phone', 'address', 'city', 'pincode', 'photoURL'
+            ]))
+          || isAdmin()
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Carts: owner-only
+    match /carts/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create, update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidCart(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(userId) && isOwner(userId);
+    }
+
+    // Products: public read, admin-only write
+    match /products/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if true;
+      allow create: if isValidId(productId)
+        && isAdmin()
+        && isValidProduct(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(productId)
+        && isAdmin()
+        && isValidProduct(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'slug', 'description', 'flavour', 'milletType',
+          'price', 'trialPrice', 'weightGrams', 'trialWeightGrams',
+          'images', 'ingredients', 'nutrition', 'stock', 'featured'
+        ]);
+      allow delete: if isValidId(productId) && isAdmin();
+    }
+
+    // Orders: owner read/create, admin read/update
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId)
+        && ((isSignedIn() && existing().userId == request.auth.uid) || isAdmin());
+      allow list: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+      allow create: if isValidId(orderId)
+        && isVerified()
+        && isValidOrder(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'Placed'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(orderId)
+        && isValidOrder(incoming())
+        && isAdmin()
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paymentStatus']);
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    // Trial Requests: owner read/create, admin read/update
+    match /trialRequests/{requestId} {
+      allow get: if isValidId(requestId)
+        && ((isSignedIn() && existing().userId == request.auth.uid) || isAdmin());
+      allow list: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+      allow create: if isValidId(requestId)
+        && isVerified()
+        && isValidTrialRequest(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'Pending'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(requestId)
+        && isValidTrialRequest(incoming())
+        && isAdmin()
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    // Surveys: verified users create; admin read/manage
+    match /surveys/{surveyId} {
+      allow get: if isValidId(surveyId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(surveyId)
+        && isVerified()
+        && isValidSurvey(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update, delete: if isValidId(surveyId) && isAdmin();
+    }
+
+    // Contact Messages: public create with strict schema; admin-only read
+    match /contactMessages/{messageId} {
+      allow get: if isValidId(messageId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(messageId)
+        && isValidContactMessage(incoming())
+        && incoming().createdAt == request.time;
+      allow update, delete: if isValidId(messageId) && isAdmin();
+    }
+
+    // Newsletter / WhatsApp Subscribers: public create; admin-only read
+    match /subscribers/{subscriberId} {
+      allow get: if isValidId(subscriberId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(subscriberId)
+        && isValidSubscriber(incoming())
+        && incoming().createdAt == request.time;
+      allow update, delete: if isValidId(subscriberId) && isAdmin();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Milletly",
+  "description": "Indian D2C brand selling baked whole-grain millet snacks (Ragi, Jowar, Bajra) at an honest mid-range price. Try a smarter snack today.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,231 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered customer or admin profile created on first Google Sign-In.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["customer", "admin"] },
+        "phone": { "type": "string", "maxLength": 15 },
+        "address": { "type": "string", "maxLength": 300 },
+        "city": { "type": "string", "maxLength": 80 },
+        "pincode": { "type": "string", "maxLength": 10 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "photoURL", "role", "createdAt"]
+    },
+    "Cart": {
+      "title": "Cart",
+      "description": "Persisted shopping cart for signed-in customer.",
+      "type": "object",
+      "properties": {
+        "items": { "type": "array", "description": "Cart line items (max 30)." },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["items", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Baked millet snack SKU sold on Milletly.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "slug": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "minLength": 5, "maxLength": 1500 },
+        "flavour": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "milletType": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "price": { "type": "number" },
+        "trialPrice": { "type": "number" },
+        "weightGrams": { "type": "number" },
+        "trialWeightGrams": { "type": "number" },
+        "images": { "type": "array" },
+        "ingredients": { "type": "array" },
+        "nutrition": { "type": "object" },
+        "stock": { "type": "number" },
+        "featured": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "description",
+        "flavour",
+        "milletType",
+        "price",
+        "trialPrice",
+        "weightGrams",
+        "trialWeightGrams",
+        "images",
+        "ingredients",
+        "nutrition",
+        "stock",
+        "featured",
+        "createdAt"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer D2C snack order with delivery address and fulfillment status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "shippingFee": { "type": "number" },
+        "total": { "type": "number" },
+        "address": { "type": "object" },
+        "phone": { "type": "string", "minLength": 10, "maxLength": 15 },
+        "paymentMethod": { "type": "string", "enum": ["COD_UPI_CONFIRM", "RAZORPAY"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid"] },
+        "status": {
+          "type": "string",
+          "enum": ["Placed", "Confirmed", "Shipped", "Delivered", "Cancelled"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "userEmail",
+        "items",
+        "subtotal",
+        "shippingFee",
+        "total",
+        "address",
+        "phone",
+        "paymentMethod",
+        "paymentStatus",
+        "status",
+        "createdAt"
+      ]
+    },
+    "TrialRequest": {
+      "title": "TrialRequest",
+      "description": "30-day validation free trial pack request from an authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 150 },
+        "phone": { "type": "string", "minLength": 10, "maxLength": 15 },
+        "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "address": { "type": "string", "minLength": 5, "maxLength": 300 },
+        "pincode": { "type": "string", "minLength": 6, "maxLength": 10 },
+        "preferredFlavour": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "currentSnackHabit": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "tasteFeedback": { "type": "string", "maxLength": 600 },
+        "feedbackConsent": { "type": "boolean" },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Approved", "Dispatched", "Completed"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "email",
+        "phone",
+        "city",
+        "address",
+        "pincode",
+        "preferredFlavour",
+        "currentSnackHabit",
+        "feedbackConsent",
+        "status",
+        "createdAt"
+      ]
+    },
+    "SurveyResponse": {
+      "title": "SurveyResponse",
+      "description": "User taste and pricing validation survey submission.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "userName": { "type": "string", "maxLength": 100 },
+        "currentSnackingHabits": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "monthlySpend": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "preferredFlavours": { "type": "array" },
+        "willingnessToPay": { "type": "number" },
+        "tasteRating": { "type": "number" },
+        "wouldBuyAgain": { "type": "string", "enum": ["Yes", "Maybe", "No"] },
+        "comments": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "userEmail",
+        "userName",
+        "currentSnackingHabits",
+        "monthlySpend",
+        "preferredFlavours",
+        "willingnessToPay",
+        "tasteRating",
+        "wouldBuyAgain",
+        "comments",
+        "createdAt"
+      ]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Customer inquiry submitted via Contact Us page.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 150 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 150 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 2000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "subject", "message", "createdAt"]
+    },
+    "Subscriber": {
+      "title": "Subscriber",
+      "description": "Newsletter email or WhatsApp drop subscriber.",
+      "type": "object",
+      "properties": {
+        "contact": { "type": "string", "minLength": 4, "maxLength": 150 },
+        "channel": { "type": "string", "enum": ["email", "whatsapp"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contact", "channel", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Customer and admin profile documents keyed by Firebase Auth UID."
+    },
+    "/carts/{userId}": {
+      "schema": { "$ref": "#/entities/Cart" },
+      "description": "Per-user persisted cart items keyed by Firebase Auth UID."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Publicly readable snack catalog managed exclusively by admins."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders readable by owner or admin, updatable only by admin."
+    },
+    "/trialRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/TrialRequest" },
+      "description": "Free trial pack requests submitted by signed-in users."
+    },
+    "/surveys/{surveyId}": {
+      "schema": { "$ref": "#/entities/SurveyResponse" },
+      "description": "Snacking habits and pricing validation surveys submitted by signed-in users."
+    },
+    "/contactMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Contact form messages readable only by admins."
+    },
+    "/subscribers/{subscriberId}": {
+      "schema": { "$ref": "#/entities/Subscriber" },
+      "description": "Email/WhatsApp launch list subscribers readable only by admins."
+    }
+  }
+}
