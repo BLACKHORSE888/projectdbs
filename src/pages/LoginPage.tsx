@@ -17,6 +17,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [submitting, setSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
@@ -28,13 +29,17 @@ export const LoginPage: React.FC = () => {
 
   const handleLogin = async () => {
     setSubmitting(true);
+    setAuthError(null);
     try {
       await signInWithGoogle();
       showToast('Welcome to Milletly!');
       navigate(from, { replace: true });
     } catch (err) {
-      console.error(err);
-      showToast('Google Sign-In failed. Please allow popups and try again.', 'error');
+      console.error('Google Sign-In error:', err);
+      const message =
+        err instanceof Error ? err.message : 'Google Sign-In failed. Please try again.';
+      setAuthError(message);
+      showToast(message, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -79,6 +84,12 @@ export const LoginPage: React.FC = () => {
           </svg>
           <span>{submitting ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
+
+        {authError && (
+          <div className="mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-left text-xs text-red-700 leading-relaxed">
+            {authError}
+          </div>
+        )}
 
         <div className="mt-6 flex items-center justify-center gap-2 text-xs text-charcoal-600">
           <ShieldCheck className="w-4 h-4 text-forest-500" />

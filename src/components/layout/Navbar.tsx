@@ -48,8 +48,10 @@ export const Navbar: React.FC = () => {
       showToast('Signed in with Google!');
       setMobileOpen(false);
     } catch (err) {
-      console.error(err);
-      showToast('Google Sign-In failed or was cancelled.', 'error');
+      console.error('Google Sign-In error:', err);
+      const message =
+        err instanceof Error ? err.message : 'Google Sign-In failed or was cancelled.';
+      showToast(message, 'error');
     }
   };
 

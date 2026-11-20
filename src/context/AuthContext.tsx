@@ -45,11 +45,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadUserProfile]);
 
   const signInWithGoogle = useCallback(async () => {
-    const result = await signInWithPopup(auth, googleProvider);
-    if (result.user) {
-      await loadUserProfile(result.user);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      // Profile creation/loading is handled once by onAuthStateChanged
+    } catch (error: unknown) {
+      const code = (error as { code?: string })?.code || '';
+      const host = typeof window !== 'undefined' ? window.location.hostname : '';
+      if (code === 'auth/unauthorized-domain') {
+        throw new Error(
+          `Domain "${host}" is not authorized in Firebase Auth. Add it under Firebase Console -> Authentication -> Settings -> Authorized domains.`
+        );
+      }
+      if (code === 'auth/popup-blocked') {
+        throw new Error('Sign-in popup was blocked by your browser. Please allow popups and try again.');
+      }
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        throw new Error('Sign-in window was closed before completing login.');
+      }
+      if (code === 'auth/operation-not-allowed') {
+        throw new Error('Google Sign-In is not enabled in Firebase Authentication -> Sign-in method.');
+      }
+      const msg = error instanceof Error ? error.message : 'Google Sign-In failed.';
+      throw new Error(code ? `${msg} (${code})` : msg);
     }
-  }, [loadUserProfile]);
+  }, []);
 
   const logout = useCallback(async () => {
     await signOut(auth);
